@@ -1,0 +1,53 @@
+dataProduct:
+  id: urn:dmb:dp:healthcare:vaccinations:0
+  name: Vaccinations
+  fullyQualifiedName: Vaccinations
+  description: DP about vaccinations
+  kind: dataproduct
+  domain: healthcare
+  version: 0.1.0
+  environment: development
+  dataProductOwner: user:name.surname_email.com
+  dataProductOwnerDisplayName: Name Surname
+  email: name.surname@email.com
+  ownerGroup: name.surname_email.com
+  devGroup: group:dev
+  informationSLA: 2BD
+  maturity: Tactical
+  billing: {}
+  tags: []
+  specific: {}
+  domainId: urn:dmb:dmn:healthcare
+  useCaseTemplateId: urn:dmb:utm:dataproduct-template:0.0.0
+  infrastructureTemplateId: urn:dmb:itm:dataproduct-provisioner:1
+  components:
+    - kind: outputport
+      id: urn:dmb:cmp:healthcare:vaccinations:0:bigquery-output-port
+      name: BigQuery Output Port
+      fullyQualifiedName: BigQuery Output Port
+      description: BigQuery Output Port for vaccinations data
+      version: 0.0.0
+      infrastructureTemplateId: urn:dmb:itm:google-bigquery-tech-adapter:0
+      useCaseTemplateId: urn:dmb:utm:google-bigquery-outputport-template:0.0.0
+      dependsOn: []
+      platform: GCP
+      technology: BigQuery
+      outputPortType: SQL
+      dataContract:
+        schema:
+          - name: column1
+            description: description1
+            dataType: STRING
+          - name: column2
+            description: description2
+            dataType: STRING
+      dataSharingAgreement: {}
+      tags: []
+      sampleData: {}
+      semanticLinking: []
+      specific:
+        project: project1
+        dataset: dataset1
+        tableName: tableName1
+        viewName: viewName1
+componentIdToProvision: urn:dmb:cmp:healthcare:vaccinations:0:bigquery-output-port
