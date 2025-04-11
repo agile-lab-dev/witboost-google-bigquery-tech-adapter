@@ -1,86 +1,121 @@
 package com.witboost.provisioning.bigquery.service.provision;
 
+import static io.vavr.control.Either.right;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
 
-import com.witboost.provisioning.model.DataProduct;
+import com.google.cloud.Identity;
+import com.google.cloud.bigquery.Table;
+import com.google.cloud.bigquery.TableId;
+import com.witboost.provisioning.bigquery.model.BigQueryOutputPortSpecific;
+import com.witboost.provisioning.bigquery.service.AclService;
+import com.witboost.provisioning.bigquery.service.BigQueryService;
+import com.witboost.provisioning.bigquery.service.PrincipalMappingService;
+import com.witboost.provisioning.bigquery.util.ResourceUtils;
 import com.witboost.provisioning.model.OutputPort;
 import com.witboost.provisioning.model.Specific;
-import com.witboost.provisioning.model.common.FailedOperation;
-import com.witboost.provisioning.model.common.Problem;
 import com.witboost.provisioning.model.request.AccessControlOperationRequest;
 import com.witboost.provisioning.model.request.ProvisionOperationRequest;
-import com.witboost.provisioning.model.request.ReverseProvisionOperationRequest;
-import java.util.Collections;
+import com.witboost.provisioning.parser.Parser;
+import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-/*
- * TODO Review these tests after you have implemented the tech adapter logic
- */
+@ExtendWith(MockitoExtension.class)
 class OutputPortProvisionServiceTest {
 
+    @Mock
+    private BigQueryService bigQueryService;
+
+    @Mock
+    private PrincipalMappingService principalMappingService;
+
+    @Mock
+    private AclService aclService;
+
+    @InjectMocks
+    private OutputPortProvisionService provisionService;
+
+    private final Table mockedView = mock(Table.class);
+    private final TableId viewId = TableId.of("project1", "dataset1", "viewName1");
+
     @Test
-    void provisionUnimplemented() {
-        var provisionService = new OutputPortProvisionService();
-        var expectedError = new FailedOperation(
-                "Provision for the operation request is not supported",
-                Collections.singletonList(new Problem(
-                        "This adapter doesn't support provisioning for the received request",
-                        Set.of(
-                                "Ensure that the adapter is registered correctly for this type of request and that the ProvisionConfiguration is set up to support the requested component",
-                                "Please try again. If the problem persists, contact the platform team."))));
-        var actual = provisionService.provision(
-                new ProvisionOperationRequest<>(new DataProduct<>(), new OutputPort<>(), false, Optional.empty()));
-        assertTrue(actual.isLeft());
-        assertEquals(expectedError, actual.getLeft());
+    void provisionOk() throws IOException {
+        when(mockedView.getTableId()).thenReturn(viewId);
+        when(bigQueryService.createOrUpdateView(any())).thenReturn(right(mockedView));
+        when(principalMappingService.map(Set.of("user:name.surname_email.com", "group:dev")))
+                .thenReturn(Map.of(
+                        "user:name.surname_email.com",
+                        right(Identity.user("name.username@email.com")),
+                        "group:dev",
+                        right(Identity.group("dev@email.com"))));
+        when(aclService.applyAcls(anyList(), anyList(), any())).thenReturn(right(null));
+
+        var actualRes = provisionService.provision(getProvisionOperationRequest(false));
+
+        assertTrue(actualRes.isRight());
     }
 
     @Test
-    void unprovisionUnimplemented() {
-        var provisionService = new OutputPortProvisionService();
-        var expectedError = new FailedOperation(
-                "Unprovision for the operation request is not supported",
-                Collections.singletonList(new Problem(
-                        "This adapter doesn't support unprovisioning for the received request",
-                        Set.of(
-                                "Ensure that the adapter is registered correctly for this type of request and that the ProvisionConfiguration is set up to support the requested component",
-                                "Please try again. If the problem persists, contact the platform team."))));
-        var actual = provisionService.unprovision(
-                new ProvisionOperationRequest<>(new DataProduct<>(), new OutputPort<>(), false, Optional.empty()));
-        assertTrue(actual.isLeft());
-        assertEquals(expectedError, actual.getLeft());
+    void unprovisionNoRemoveData() throws IOException {
+        when(aclService.revokeRoles(anyList(), any())).thenReturn(right(null));
+
+        var actualRes = provisionService.unprovision(getProvisionOperationRequest(false));
+
+        assertTrue(actualRes.isRight());
+        verifyNoInteractions(bigQueryService, principalMappingService);
     }
 
     @Test
-    void updateAclUnimplemented() {
-        var provisionService = new OutputPortProvisionService();
-        var expectedError = new FailedOperation(
-                "Access control lists update for the operation request is not supported",
-                Collections.singletonList(new Problem(
-                        "This adapter doesn't support updating access control lists for the received request",
-                        Set.of(
-                                "Ensure that the adapter is registered correctly for this type of request and that the ProvisionConfiguration is set up to support the requested component",
-                                "Please try again. If the problem persists, contact the platform team."))));
-        var actual = provisionService.updateAcl(
-                new AccessControlOperationRequest<>(new DataProduct<>(), Optional.of(new OutputPort<>()), Set.of()));
-        assertTrue(actual.isLeft());
-        assertEquals(expectedError, actual.getLeft());
+    void unprovisionWithRemoveData() throws IOException {
+        when(aclService.revokeRoles(anyList(), any())).thenReturn(right(null));
+        when(bigQueryService.deleteView(anyString(), anyString(), anyString())).thenReturn(right(null));
+
+        var actualRes = provisionService.unprovision(getProvisionOperationRequest(true));
+
+        assertTrue(actualRes.isRight());
+        verifyNoInteractions(principalMappingService);
     }
 
     @Test
-    void reverseProvisionUnimplemented() {
-        var provisionService = new OutputPortProvisionService();
-        var expectedError = new FailedOperation(
-                "Reverse provisioning for the operation request is not supported",
-                Collections.singletonList(new Problem(
-                        "This adapter doesn't support reverse provisioning for the received request",
-                        Set.of(
-                                "Ensure that the adapter is registered correctly for this type of request and that the ProvisionConfiguration is set up to support the requested component",
-                                "Please try again. If the problem persists, contact the platform team."))));
-        var actual = provisionService.reverseProvision(
-                new ReverseProvisionOperationRequest<>("useCaseTemplateId", "environment", new Specific(), null));
-        assertTrue(actual.isLeft());
-        assertEquals(expectedError, actual.getLeft());
+    void updateAclOk() throws IOException {
+        when(aclService.revokeRoles(anyList(), any())).thenReturn(right(null));
+        when(principalMappingService.map(Set.of("user:user1_email.com", "user:user2_email.com")))
+                .thenReturn(Map.of(
+                        "user:user1_email.com",
+                        right(Identity.user("user1@email.com")),
+                        "user:user2_email.com",
+                        right(Identity.user("user2@email.com"))));
+        when(aclService.applyAcls(anyList(), anyList(), any())).thenReturn(right(null));
+        var users = Set.of("user:user1_email.com", "user:user2_email.com");
+        var provisionOperationRequest = getProvisionOperationRequest(false);
+        var updateAclRequest = new AccessControlOperationRequest<>(
+                provisionOperationRequest.getDataProduct(), provisionOperationRequest.getComponent(), users);
+
+        var actualRes = provisionService.updateAcl(updateAclRequest);
+
+        assertTrue(actualRes.isRight());
+    }
+
+    private ProvisionOperationRequest<Specific, BigQueryOutputPortSpecific> getProvisionOperationRequest(
+            boolean removeData) throws IOException {
+        String ymlDescriptor = ResourceUtils.getContentFromResource("/pr_descriptor_bigquery_op.yml");
+        var componentDescriptor =
+                Parser.parseComponentDescriptor(ymlDescriptor, Specific.class).get();
+        var component = componentDescriptor
+                .getDataProduct()
+                .getComponentToProvision(componentDescriptor.getComponentIdToProvision())
+                .get();
+        var op = Parser.parseComponent(component, OutputPort.class, BigQueryOutputPortSpecific.class)
+                .get();
+        return new ProvisionOperationRequest<>(componentDescriptor.getDataProduct(), op, removeData, Optional.empty());
     }
 }

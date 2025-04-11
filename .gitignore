@@ -304,3 +304,4 @@ pyrightconfig.json
 .ionide
 
 *.drawio.bkp
+application-local.yml

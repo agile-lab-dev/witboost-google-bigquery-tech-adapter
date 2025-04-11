@@ -3,6 +3,8 @@ package com.witboost.provisioning.bigquery.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.witboost.provisioning.model.Specific;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,4 +24,7 @@ public class BigQueryOutputPortSpecific extends Specific {
 
     @NotBlank
     private String viewName;
+
+    @NotNull
+    private List<String> ownerRoles;
 }

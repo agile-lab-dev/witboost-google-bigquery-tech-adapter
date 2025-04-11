@@ -20,7 +20,7 @@ This repository is part of our [Starter Kit](https://github.com/agile-lab-dev/wi
 
 ## Overview
 
-TODO
+This project implements a Tech Adapter that provision a Google BigQuery view and manages its permissions.
 
 ### What's a Tech Adapter?
 
@@ -149,7 +149,17 @@ export PROVISIONER_VERSION=$(date +%Y%m%d-%H%M%S);
 
 ## Configuring
 
-TODO
+Application configuration is handled using the features provided by Spring Boot. You can find the default settings in the `application.yml`. Customize it and use the `spring.config.location` system property or the other options provided by the framework according to your needs.
+
+### Authentication
+
+The Tech Adapter uses the [BigQuery API Java Client Library](https://cloud.google.com/bigquery/docs/reference/libraries?hl=en#client-libraries-install-java). The client library support [Application Default Credentials (ADC)](https://cloud.google.com/docs/authentication/application-default-credentials?hl=en): the library look for credentials in a set of defined locations and use those credentials to authenticate requests to the API. With ADC, you can make credentials available to your application in a variety of environments, such as local development or production, without needing to modify your application code. Consult official [documentation](https://cloud.google.com/docs/authentication/provide-credentials-adc?hl=en) on how to set up ADC.
+
+### Principal Mapping
+
+| Configuration                           | Description                                              | 
+|:----------------------------------------|:---------------------------------------------------------|
+| principalMappingService.groupMailDomain | Domain used by the group identities. E.g. "@example.com" |
 
 ## Running
 

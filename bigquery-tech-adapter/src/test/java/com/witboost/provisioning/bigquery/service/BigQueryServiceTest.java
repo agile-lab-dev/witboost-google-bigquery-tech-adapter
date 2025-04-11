@@ -66,8 +66,7 @@ public class BigQueryServiceTest {
         assertEquals(1, actualRes.getLeft().problems().size());
         actualRes.getLeft().problems().forEach(p -> {
             assertEquals(expectedDesc, p.description());
-            assertTrue(p.cause().isPresent());
-            assertEquals(ex, p.cause().get());
+            assertTrue(p.cause().isEmpty());
             assertEquals(1, p.solutions().size());
             p.solutions().forEach(s -> assertEquals(expectedSolution, s));
         });
@@ -174,8 +173,34 @@ public class BigQueryServiceTest {
         assertEquals(1, actualRes.getLeft().problems().size());
         actualRes.getLeft().problems().forEach(p -> {
             assertEquals(expectedDesc, p.description());
-            assertTrue(p.cause().isPresent());
-            assertEquals(ex, p.cause().get());
+            assertTrue(p.cause().isEmpty());
+            assertEquals(1, p.solutions().size());
+            p.solutions().forEach(s -> assertEquals(expectedSolution, s));
+        });
+    }
+
+    @Test
+    public void testDeleteViewOk() {
+        when(bigQueryClient.delete(any(TableId.class))).thenReturn(true);
+
+        var actualRes = bigQueryService.deleteView(project, dataset, view);
+
+        assertTrue(actualRes.isRight());
+    }
+
+    @Test
+    public void testDeleteViewError() {
+        when(bigQueryClient.delete(any(TableId.class))).thenThrow(ex);
+        String expectedDesc = "Failed to delete view 'project.dataset.view': Unauthorized";
+        String expectedSolution = "Please try again. If the problem persists, contact the platform team.";
+
+        var actualRes = bigQueryService.deleteView(project, dataset, view);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+        actualRes.getLeft().problems().forEach(p -> {
+            assertEquals(expectedDesc, p.description());
+            assertTrue(p.cause().isEmpty());
             assertEquals(1, p.solutions().size());
             p.solutions().forEach(s -> assertEquals(expectedSolution, s));
         });

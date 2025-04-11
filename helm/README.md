@@ -22,6 +22,7 @@ A Helm chart for Kubernetes
 |-----|------|---------|-------------|
 | configOverride | string | `nil` | This configuration allows you to override the application.yml file |
 | dockerRegistrySecretName | string | `"regcred"` | Docker Registry Secret name used to access a private repo |
+| enableGoogleApplicationCredentials | bool | `false` | This configuration allows to define the GOOGLE_APPLICATION_CREDENTIALS environment variable to provide the location of a credential JSON file |
 | extraEnvVars | list | `[]` | define extra variables to add to the container(s) e.g: extraEnvVars:   - name: FOO     value: "10" |
 | image.pullPolicy | string | `"IfNotPresent"` | The imagePullPolicy for a container and the tag of the image affect when the kubelet attempts to pull (download) the specified image. |
 | image.registry | string | `"registry.gitlab.com/agilefactory/witboost.mesh/provisioning/google/witboost.mesh.provisioning.google.bigquery"` | Image repository |

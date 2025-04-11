@@ -50,4 +50,6 @@ dataProduct:
         dataset: dataset1
         tableName: tableName1
         viewName: viewName1
+        ownerRoles:
+          - roles/bigquery.dataOwner
 componentIdToProvision: urn:dmb:cmp:healthcare:vaccinations:0:bigquery-output-port

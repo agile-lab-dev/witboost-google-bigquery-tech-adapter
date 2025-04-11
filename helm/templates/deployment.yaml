@@ -27,6 +27,14 @@ spec:
           configMap:
             name: {{ template "javasp.fullname" . }}-config
             defaultMode: 420
+        {{- if .Values.enableGoogleApplicationCredentials }}
+        - name: google-application-credentials-volume
+          secret:
+            secretName: google-bigquery-tech-adapter-secrets
+            items:
+              - key: GOOGLE_APPLICATION_CREDENTIALS
+                path: google-application-credentials.json
+        {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: {{ .Values.image.registry }}:{{ .Values.image.tag }}
@@ -67,6 +75,15 @@ spec:
             {{- if .Values.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}
             {{- end }}
+            {{- if .Values.enableGoogleApplicationCredentials }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /security/google-application-credentials.json
+            {{- end }}
           volumeMounts:
             - name: config
               mountPath: /opt/docker/etc/configs
+            {{- if .Values.enableGoogleApplicationCredentials }}
+            - name: google-application-credentials-volume
+              mountPath: /security
+              readOnly: true
+            {{- end }}

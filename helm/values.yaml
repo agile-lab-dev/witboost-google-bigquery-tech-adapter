@@ -52,3 +52,6 @@ labels: {}
 
 # -- This configuration allows you to override the application.yml file
 configOverride:
+
+# -- This configuration allows to define the GOOGLE_APPLICATION_CREDENTIALS environment variable to provide the location of a credential JSON file
+enableGoogleApplicationCredentials: false

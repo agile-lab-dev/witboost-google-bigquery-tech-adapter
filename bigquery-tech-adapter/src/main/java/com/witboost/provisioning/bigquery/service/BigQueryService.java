@@ -44,7 +44,7 @@ public class BigQueryService {
             logger.error(error, e);
             return left(new FailedOperation(
                     userMessage,
-                    List.of(new Problem(error, Optional.of(e), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
         }
     }
 
@@ -68,7 +68,7 @@ public class BigQueryService {
             logger.error(error, e);
             return left(new FailedOperation(
                     userMessage,
-                    List.of(new Problem(error, Optional.of(e), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
         }
     }
 
@@ -102,7 +102,24 @@ public class BigQueryService {
             logger.error(error, e);
             return left(new FailedOperation(
                     userMessage,
-                    List.of(new Problem(error, Optional.of(e), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+        }
+    }
+
+    public Either<FailedOperation, Void> deleteView(String project, String dataset, String view) {
+        try {
+            TableId viewId = TableId.of(project, dataset, view);
+            logger.info("Deleting view {}", viewId);
+            bigQueryClient.delete(viewId);
+            return right(null);
+        } catch (Exception e) {
+            String userMessage = "An unexpected error occurred";
+            String error =
+                    String.format("Failed to delete view '%s.%s.%s': %s", project, dataset, view, e.getMessage());
+            logger.error(error, e);
+            return left(new FailedOperation(
+                    userMessage,
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
         }
     }
 
@@ -126,6 +143,10 @@ public class BigQueryService {
         var fields = schema.stream()
                 .map(c -> Field.newBuilder(c.getName(), StandardSQLTypeName.valueOf(c.getDataType()))
                         .setDescription(c.getDescription())
+                        .setMaxLength(c.getDataLength().map(Long::valueOf).orElse(null))
+                        .setScale(c.getScale().map(Long::valueOf).orElse(null))
+                        .setPrecision(c.getPrecision().map(Long::valueOf).orElse(null))
+                        .setMode(c.getConstraint().map(Field.Mode::valueOf).orElse(null))
                         .build())
                 .toList();
         return Schema.of(fields);
