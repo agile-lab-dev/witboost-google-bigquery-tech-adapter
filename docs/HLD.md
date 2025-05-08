@@ -4,9 +4,8 @@ This document describes the High Level Design of the Google BigQuery Tech Adapte
 The source diagrams can be found and edited in the [accompanying draw.io file](HLD.drawio).
 
 - [Overview](#overview)
-- [Provisioning](#provisioning)
-- [Unprovisioning](#unprovisioning)
-- [Update ACL](#update-acl) 
+- [Storage Area](#storage-area)
+- [Output Port](#output-port)
 
 ## Overview
 
@@ -66,6 +65,14 @@ BigQuery interfaces include Google Cloud console interface and the BigQuery comm
 
 A dataset is contained within a specific project. Datasets are top-level containers that are used to organize and control access to tables and views.
 
+#### Tables
+
+A BigQuery table contains individual records organized in rows. Each record is composed of columns (also called fields).
+
+Every table is defined by a _schema_ that describes the column names, data types, and other information. You can specify the schema of a table when it is created, or you can create a table without a schema and declare the schema in the query job or load job that first populates it with data.
+
+Use the format `projectname.datasetname.tablename` to fully qualify a table name when using GoogleSQL.
+
 #### Logical views
 
 A view is a virtual table defined by a SQL query. The default type of view for BigQuery is a _logical view_. Query results contain only the data from the tables and fields specified in the query that defines the view.
@@ -105,20 +112,33 @@ When you refer to a principal in an Identity and Access Management (IAM) policy,
 The **Google BigQuery Tech Adapter** provides integration with BigQuery to manage views (along with schemas) and apply ACLs to them. It uses the [BigQuery client libraries](https://cloud.google.com/bigquery/docs/reference/libraries?hl=en).
 
 It offers:
+- **Table Management**: Create a table as a Storage Area component.
 - **View Management**: Create a view to decouple underlying source table schema from the Output Port schema.
 - **View Schema Management**: Columns need to be a subset (or the same) as underlying table
 - **IAM Management**:
-  - Assign configurable (per-environment) permissions on the view to Owner and Dev Group
-  - Assign Read permission for whoever request access to it.
+  - Assign configurable (per-environment) permissions on the table/view to Owner and Dev Group
+  - Assign Read permission for whoever request access to the view.
 
-## Provisioning
+## Storage Area
 
-![HLD-Provisioning.png](img/HLD-Provisioning.png)
+### Provisioning
 
-## Unprovisioning
+![HLD-Storage-Provisioning.png](img/HLD-Storage-Provisioning.png)
 
-![HLD-Unprovisioning.png](img/HLD-Unprovisioning.png)
+### Unprovisioning
 
-## Update ACL
+![HLD-Storage-Unprovisioning.png](img/HLD-Storage-Unprovisioning.png)
 
-![HLD-UpdateAcl.png](img/HLD-UpdateAcl.png)
+## Output Port
+
+### Provisioning
+
+![HLD-OP-Provisioning.png](img/HLD-OP-Provisioning.png)
+
+### Unprovisioning
+
+![HLD-OP-Unprovisioning.png](img/HLD-OP-Unprovisioning.png)
+
+### Update ACL
+
+![HLD-OP-UpdateAcl.png](img/HLD-OP-UpdateAcl.png)
