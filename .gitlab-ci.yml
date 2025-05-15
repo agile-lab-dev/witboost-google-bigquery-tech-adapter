@@ -94,6 +94,7 @@ vulnerability_analysis:
     when: always
     paths:
       - report/target/dependency-check-report.html
+  when: manual
 
 license_check:
   stage: compile

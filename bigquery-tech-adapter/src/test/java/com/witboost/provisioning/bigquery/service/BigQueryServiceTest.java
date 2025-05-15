@@ -217,4 +217,60 @@ public class BigQueryServiceTest {
         column2.setDescription("top_term description");
         return List.of(column1, column2);
     }
+
+    @Test
+    public void testIsTableSchemaCompatibleWithColumns_AllPresent() {
+        Schema schema =
+                Schema.of(Field.of("col1", StandardSQLTypeName.STRING), Field.of("col2", StandardSQLTypeName.INT64));
+        Column col1 = new Column();
+        col1.setName("col1");
+        Column col2 = new Column();
+        col2.setName("col2");
+        List<Column> requiredColumns = List.of(col1, col2);
+
+        var actualRes = bigQueryService.isTableSchemaCompatibleWithColumns(schema, requiredColumns);
+
+        assertTrue(actualRes.isRight());
+        assertTrue(actualRes.get());
+    }
+
+    @Test
+    public void testIsTableSchemaCompatibleWithColumns_MissingColumn() {
+        Schema schema =
+                Schema.of(Field.of("col1", StandardSQLTypeName.STRING), Field.of("col2", StandardSQLTypeName.INT64));
+        Column col1 = new Column();
+        col1.setName("col1");
+        List<Column> requiredColumns = List.of(col1);
+
+        var actualRes = bigQueryService.isTableSchemaCompatibleWithColumns(schema, requiredColumns);
+
+        assertTrue(actualRes.isRight());
+        assertFalse(actualRes.get());
+    }
+
+    @Test
+    public void testIsTableSchemaCompatibleWithColumns_AllPresentAndAdded() {
+        Schema schema =
+                Schema.of(Field.of("col1", StandardSQLTypeName.STRING), Field.of("col2", StandardSQLTypeName.INT64));
+        Column col1 = new Column();
+        col1.setName("col1");
+        Column col2 = new Column();
+        col2.setName("col2");
+        Column col3 = new Column();
+        col3.setName("col3");
+        List<Column> requiredColumns = List.of(col1, col2, col3);
+
+        var actualRes = bigQueryService.isTableSchemaCompatibleWithColumns(schema, requiredColumns);
+
+        assertTrue(actualRes.isRight());
+        assertTrue(actualRes.get());
+    }
+
+    @Test
+    public void testIsTableSchemaCompatibleWithColumns_Error() {
+        var actualRes = bigQueryService.isTableSchemaCompatibleWithColumns(null, null);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+    }
 }

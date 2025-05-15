@@ -151,4 +151,27 @@ public class BigQueryService {
                 .toList();
         return Schema.of(fields);
     }
+
+    public Either<FailedOperation, Boolean> isTableSchemaCompatibleWithColumns(
+            Schema actualTableSchema, List<Column> requiredColumns) {
+        try {
+            logger.info(
+                    "Checking if table schema {} contains all required columns {}", actualTableSchema, requiredColumns);
+            var requiredColumnNamesSet =
+                    requiredColumns.stream().map(Column::getName).collect(Collectors.toSet());
+            var tableColumnNamesSet =
+                    actualTableSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
+            boolean allRequiredPresent = requiredColumnNamesSet.containsAll(tableColumnNamesSet);
+            logger.info("All table schema columns are covered by required columns: {}", allRequiredPresent);
+            return right(allRequiredPresent);
+        } catch (Exception e) {
+            String userMessage = ("Detected schema mismatch: provided schema is not compatible with existing table: {}"
+                    + actualTableSchema);
+            String error = String.format("Failed to check table schema columns: %s", e.getMessage());
+            logger.error(error, e);
+            return left(new FailedOperation(
+                    userMessage,
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+        }
+    }
 }

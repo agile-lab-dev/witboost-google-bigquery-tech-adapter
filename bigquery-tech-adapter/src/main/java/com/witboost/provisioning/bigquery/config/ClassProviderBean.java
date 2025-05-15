@@ -1,6 +1,7 @@
 package com.witboost.provisioning.bigquery.config;
 
 import com.witboost.provisioning.bigquery.model.BigQueryOutputPortSpecific;
+import com.witboost.provisioning.bigquery.model.BigQueryStorageSpecific;
 import com.witboost.provisioning.framework.service.ComponentClassProvider;
 import com.witboost.provisioning.framework.service.SpecificClassProvider;
 import com.witboost.provisioning.framework.service.impl.ComponentClassProviderImpl;
@@ -14,13 +15,17 @@ public class ClassProviderBean {
     @Bean
     public SpecificClassProvider specificClassProvider() {
         return SpecificClassProviderImpl.builder()
-                .withDefaultSpecificClass(BigQueryOutputPortSpecific.class)
+                .withSpecificClass(
+                        "urn:dmb:utm:google-bigquery-outputport-template:0.0.0", BigQueryOutputPortSpecific.class)
+                .withSpecificClass("urn:dmb:utm:google-bigquery-storage-template:0.0.0", BigQueryStorageSpecific.class)
                 .build();
     }
 
     @Bean
     public ComponentClassProvider componentClassProvider() {
         return ComponentClassProviderImpl.defaultComponentsImpl(
-                null, null, "urn:dmb:utm:google-bigquery-outputport-template:0.0.0");
+                "urn:dmb:utm:google-bigquery-storage-template:0.0.0",
+                null,
+                "urn:dmb:utm:google-bigquery-outputport-template:0.0.0");
     }
 }
