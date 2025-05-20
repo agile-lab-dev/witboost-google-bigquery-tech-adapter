@@ -28,24 +28,24 @@ public class AclService {
         this.bigQueryClient = bigQueryClient;
     }
 
-    public Either<FailedOperation, Void> applyAcls(List<String> roles, List<Identity> principals, TableId view) {
+    public Either<FailedOperation, Void> applyAcls(List<String> roles, List<Identity> principals, TableId tableOrView) {
         try {
-            logger.info("Assigning roles {} to principals {} for view {}", roles, principals, view);
+            logger.info("Assigning roles {} to principals {} for table/view {}", roles, principals, tableOrView);
             var gcpRoles = roles.stream().map(Role::of).toList();
-            Policy policy = bigQueryClient.getIamPolicy(view);
+            Policy policy = bigQueryClient.getIamPolicy(tableOrView);
             var policyBuilder = policy.toBuilder();
             for (var gcpRole : gcpRoles) {
                 for (var principal : principals) {
                     policyBuilder.addIdentity(gcpRole, principal);
                 }
             }
-            bigQueryClient.setIamPolicy(view, policyBuilder.build());
+            bigQueryClient.setIamPolicy(tableOrView, policyBuilder.build());
             return right(null);
         } catch (Exception e) {
             String userMessage = "An unexpected error occurred";
             String error = String.format(
-                    "Failed to setup acls for view '%s.%s.%s': %s",
-                    view.getProject(), view.getDataset(), view.getTable(), e.getMessage());
+                    "Failed to setup acls for table/view '%s.%s.%s': %s",
+                    tableOrView.getProject(), tableOrView.getDataset(), tableOrView.getTable(), e.getMessage());
             logger.error(error, e);
             return left(new FailedOperation(
                     userMessage,
@@ -53,17 +53,17 @@ public class AclService {
         }
     }
 
-    public Either<FailedOperation, Void> revokeRoles(List<String> roles, TableId view) {
+    public Either<FailedOperation, Void> revokeRoles(List<String> roles, TableId tableOrView) {
         try {
-            logger.info("Revoking roles {} for view {}", roles, view);
+            logger.info("Revoking roles {} for table/view {}", roles, tableOrView);
             var gcpRoles = roles.stream().map(Role::of).toList();
-            Policy policy = bigQueryClient.getIamPolicy(view);
+            Policy policy = bigQueryClient.getIamPolicy(tableOrView);
             Map<Role, Set<Identity>> bindings = new HashMap<>(policy.getBindings());
             for (var gcpRole : gcpRoles) {
                 bindings.remove(gcpRole);
             }
             policy = policy.toBuilder().setBindings(bindings).build();
-            bigQueryClient.setIamPolicy(view, policy);
+            bigQueryClient.setIamPolicy(tableOrView, policy);
             return right(null);
         } catch (Exception e) {
             if (e instanceof BigQueryException bqe && bqe.getCode() == 404) {
@@ -72,8 +72,8 @@ public class AclService {
             }
             String userMessage = "An unexpected error occurred";
             String error = String.format(
-                    "Failed to revoke roles for view '%s.%s.%s': %s",
-                    view.getProject(), view.getDataset(), view.getTable(), e.getMessage());
+                    "Failed to revoke roles for table/view '%s.%s.%s': %s",
+                    tableOrView.getProject(), tableOrView.getDataset(), tableOrView.getTable(), e.getMessage());
             logger.error(error, e);
             return left(new FailedOperation(
                     userMessage,

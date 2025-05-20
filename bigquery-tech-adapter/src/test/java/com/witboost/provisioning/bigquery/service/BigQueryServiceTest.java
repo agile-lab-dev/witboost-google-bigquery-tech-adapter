@@ -2,10 +2,14 @@ package com.witboost.provisioning.bigquery.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.google.cloud.bigquery.*;
+import com.witboost.provisioning.bigquery.model.CreateDatasetRequest;
+import com.witboost.provisioning.bigquery.model.CreateOrUpdateTableRequest;
 import com.witboost.provisioning.bigquery.model.CreateViewRequest;
+import com.witboost.provisioning.bigquery.model.DeleteTableRequest;
 import com.witboost.provisioning.framework.common.ErrorConstants;
 import com.witboost.provisioning.model.Column;
 import java.util.List;
@@ -272,5 +276,119 @@ public class BigQueryServiceTest {
 
         assertTrue(actualRes.isLeft());
         assertEquals(1, actualRes.getLeft().problems().size());
+    }
+
+    @Test
+    public void testCreateDatasetIfNotExists_AlreadyExists() {
+        final Dataset mockedDataset = mock(Dataset.class);
+        when(bigQueryClient.getDataset(any(DatasetId.class))).thenReturn(mockedDataset);
+
+        CreateDatasetRequest request = new CreateDatasetRequest(project, dataset);
+        var actualRes = bigQueryService.createDatasetIfNotExists(request);
+
+        assertTrue(actualRes.isRight());
+        assertEquals(mockedDataset, actualRes.get());
+    }
+
+    @Test
+    public void testCreateDatasetIfNotExists_CreatesDataset() {
+        when(bigQueryClient.getDataset(any(DatasetId.class))).thenReturn(null);
+        final Dataset createdDataset = mock(Dataset.class);
+        when(bigQueryClient.create(any(DatasetInfo.class))).thenReturn(createdDataset);
+
+        CreateDatasetRequest request = new CreateDatasetRequest(project, dataset);
+        var actualRes = bigQueryService.createDatasetIfNotExists(request);
+
+        assertTrue(actualRes.isRight());
+        assertEquals(createdDataset, actualRes.get());
+    }
+
+    @Test
+    public void testCreateDatasetIfNotExists_Error() {
+        when(bigQueryClient.getDataset(any(DatasetId.class))).thenThrow(ex);
+
+        CreateDatasetRequest request = new CreateDatasetRequest(project, dataset);
+        String expectedDesc = "Failed to create dataset 'project.dataset': Unauthorized";
+
+        var actualRes = bigQueryService.createDatasetIfNotExists(request);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
+    }
+
+    @Test
+    public void testCreateOrUpdateTable_NewTable() {
+        when(bigQueryClient.getTable(any(TableId.class))).thenReturn(null);
+        final Table mockedTable = mock(Table.class);
+        when(bigQueryClient.create(any(TableInfo.class))).thenReturn(mockedTable);
+
+        CreateOrUpdateTableRequest request = new CreateOrUpdateTableRequest(project, dataset, table, List.of());
+        var actualRes = bigQueryService.createOrUpdateTable(request);
+
+        assertTrue(actualRes.isRight());
+        assertEquals(mockedTable, actualRes.get());
+    }
+
+    @Test
+    public void testCreateOrUpdateTable_UpdateExisting() {
+        final Table existingTable = mock(Table.class);
+        final Table.Builder tableBuilder = mock(Table.Builder.class);
+        final Table updatedTableBuilt = mock(Table.class);
+        final Table updatedTableAfterUpdate = mock(Table.class);
+
+        when(bigQueryClient.getTable(any(TableId.class))).thenReturn(existingTable);
+        when(existingTable.toBuilder()).thenReturn(tableBuilder);
+        when(tableBuilder.setDefinition(any(TableDefinition.class))).thenReturn(tableBuilder);
+        when(tableBuilder.build()).thenReturn(updatedTableBuilt);
+        when(bigQueryClient.update(eq(updatedTableBuilt))).thenReturn(updatedTableAfterUpdate);
+
+        CreateOrUpdateTableRequest request = new CreateOrUpdateTableRequest(project, dataset, table, List.of());
+
+        var actualRes = bigQueryService.createOrUpdateTable(request);
+
+        assertTrue(actualRes.isRight());
+        assertEquals(updatedTableAfterUpdate, actualRes.get());
+
+        verify(bigQueryClient).getTable(TableId.of(project, dataset, table));
+        verify(existingTable).toBuilder();
+        verify(tableBuilder).setDefinition(any(StandardTableDefinition.class));
+        verify(tableBuilder).build();
+        verify(bigQueryClient).update(updatedTableBuilt);
+    }
+
+    @Test
+    public void testCreateOrUpdateTable_Error() {
+        when(bigQueryClient.getTable(any(TableId.class))).thenThrow(ex);
+
+        CreateOrUpdateTableRequest request = new CreateOrUpdateTableRequest(project, dataset, table, List.of());
+        String expectedDesc = "Failed to create or update table 'project.dataset.table': Unauthorized";
+
+        var actualRes = bigQueryService.createOrUpdateTable(request);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
+    }
+
+    @Test
+    public void testDeleteTable_Ok() {
+        when(bigQueryClient.delete(any(TableId.class))).thenReturn(true);
+
+        DeleteTableRequest request = new DeleteTableRequest(project, dataset, table);
+        var actualRes = bigQueryService.deleteTable(request);
+
+        assertTrue(actualRes.isRight());
+    }
+
+    @Test
+    public void testDeleteTable_Error() {
+        when(bigQueryClient.delete(any(TableId.class))).thenThrow(ex);
+        String expectedDesc = "Failed to delete table 'project.dataset.table': Unauthorized";
+
+        DeleteTableRequest request = new DeleteTableRequest(project, dataset, table);
+        var actualRes = bigQueryService.deleteTable(request);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
     }
 }
