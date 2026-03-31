@@ -4,6 +4,7 @@ import static io.vavr.control.Either.right;
 
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
+import com.witboost.provisioning.bigquery.model.BigQueryOutputPortReverseProvisioningSpecific;
 import com.witboost.provisioning.bigquery.model.BigQueryOutputPortSpecific;
 import com.witboost.provisioning.bigquery.model.CreateViewRequest;
 import com.witboost.provisioning.bigquery.service.AclService;
@@ -15,7 +16,9 @@ import com.witboost.provisioning.model.Specific;
 import com.witboost.provisioning.model.common.FailedOperation;
 import com.witboost.provisioning.model.request.AccessControlOperationRequest;
 import com.witboost.provisioning.model.request.ProvisionOperationRequest;
+import com.witboost.provisioning.model.request.ReverseProvisionOperationRequest;
 import com.witboost.provisioning.model.status.ProvisionInfo;
+import com.witboost.provisioning.model.status.ReverseProvisionInfo;
 import io.vavr.collection.List;
 import io.vavr.control.Either;
 import java.util.Map;
@@ -110,6 +113,18 @@ public class OutputPortProvisionService implements ProvisionService {
                     .applyAcls(java.util.List.of(READ_ROLE), ids.asJava(), viewId)
                     .flatMap(ignored -> right(ProvisionInfo.builder().build())));
         });
+    }
+
+    @Override
+    public Either<FailedOperation, ReverseProvisionInfo> reverseProvision(
+            ReverseProvisionOperationRequest<? extends Specific> operationRequest) {
+        var params = (BigQueryOutputPortReverseProvisioningSpecific) operationRequest.getParams();
+        return bigQueryService
+                .getTableSchema(params.getProject(), params.getDataset(), params.getTableName())
+                .flatMap(schema -> right(ReverseProvisionInfo.builder()
+                        .updates(Optional.of(
+                                Map.of("parameters", Map.of("schemaDefinition", Map.of("schemaColumns", schema)))))
+                        .build()));
     }
 
     private ProvisionInfo toProvisionInfo(Table view) {

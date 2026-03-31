@@ -2,6 +2,7 @@ package com.witboost.provisioning.bigquery.config;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.witboost.provisioning.bigquery.model.BigQueryOutputPortReverseProvisioningSpecific;
 import com.witboost.provisioning.bigquery.model.BigQueryOutputPortSpecific;
 import com.witboost.provisioning.bigquery.model.BigQueryStorageSpecific;
 import com.witboost.provisioning.model.OutputPort;
@@ -22,7 +23,9 @@ class ClassProviderBeanTest {
 
         assertEquals(Option.of(BigQueryOutputPortSpecific.class), specificProvider.get(useCaseTemplateIdOutputPort));
         assertEquals(Option.of(BigQueryStorageSpecific.class), specificProvider.get(useCaseTemplateIdStorage));
-        assertEquals(Option.none(), specificProvider.getReverseProvisioningParams(useCaseTemplateIdOutputPort));
+        assertEquals(
+                Option.of(BigQueryOutputPortReverseProvisioningSpecific.class),
+                specificProvider.getReverseProvisioningParams(useCaseTemplateIdOutputPort));
     }
 
     @Test

@@ -77,6 +77,89 @@ public class BigQueryServiceTest {
     }
 
     @Test
+    public void testGetTableSchemaOk() {
+        final Table mockedTable = mock(Table.class);
+        Schema schema = Schema.of(
+                Field.newBuilder("id", StandardSQLTypeName.STRING)
+                        .setDescription("identifier")
+                        .setMode(Field.Mode.REQUIRED)
+                        .setMaxLength(128L)
+                        .build(),
+                Field.newBuilder("amount", StandardSQLTypeName.NUMERIC)
+                        .setDescription("amount description")
+                        .setPrecision(38L)
+                        .setScale(9L)
+                        .build());
+        when(bigQueryClient.getTable(any(TableId.class))).thenReturn(mockedTable);
+        when(mockedTable.getDefinition()).thenReturn(StandardTableDefinition.of(schema));
+
+        var actualRes = bigQueryService.getTableSchema(project, dataset, table);
+
+        assertTrue(actualRes.isRight());
+        assertEquals(2, actualRes.get().size());
+
+        Column firstColumn = actualRes.get().get(0);
+        assertEquals("id", firstColumn.getName());
+        assertEquals("STRING", firstColumn.getDataType());
+        assertEquals("identifier", firstColumn.getDescription());
+        assertEquals("REQUIRED", firstColumn.getConstraint().orElse(null));
+        assertEquals(128, firstColumn.getDataLength().orElse(null));
+        assertTrue(firstColumn.getPrecision().isEmpty());
+        assertTrue(firstColumn.getScale().isEmpty());
+
+        Column secondColumn = actualRes.get().get(1);
+        assertEquals("amount", secondColumn.getName());
+        assertEquals("NUMERIC", secondColumn.getDataType());
+        assertEquals("amount description", secondColumn.getDescription());
+        assertTrue(secondColumn.getConstraint().isEmpty());
+        assertTrue(secondColumn.getDataLength().isEmpty());
+        assertEquals(38, secondColumn.getPrecision().orElse(null));
+        assertEquals(9, secondColumn.getScale().orElse(null));
+
+        verify(bigQueryClient).getTable(TableId.of(project, dataset, table));
+    }
+
+    @Test
+    public void testGetTableSchemaTableNotFound() {
+        when(bigQueryClient.getTable(any(TableId.class))).thenReturn(null);
+        String expectedDesc = "Failed to retrieve schema for table 'project.dataset.table': table not found";
+
+        var actualRes = bigQueryService.getTableSchema(project, dataset, table);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
+    }
+
+    @Test
+    public void testGetTableSchemaSchemaNotAvailable() {
+        final Table mockedTable = mock(Table.class);
+        final StandardTableDefinition mockedDefinition = mock(StandardTableDefinition.class);
+        when(bigQueryClient.getTable(any(TableId.class))).thenReturn(mockedTable);
+        when(mockedTable.getDefinition()).thenReturn(mockedDefinition);
+        when(mockedDefinition.getSchema()).thenReturn(null);
+        String expectedDesc = "Failed to retrieve schema for table 'project.dataset.table': schema not available";
+
+        var actualRes = bigQueryService.getTableSchema(project, dataset, table);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
+    }
+
+    @Test
+    public void testGetTableSchemaError() {
+        when(bigQueryClient.getTable(any(TableId.class))).thenThrow(ex);
+        String expectedDesc = "Failed to retrieve schema for table 'project.dataset.table': Unauthorized";
+
+        var actualRes = bigQueryService.getTableSchema(project, dataset, table);
+
+        assertTrue(actualRes.isLeft());
+        assertEquals(1, actualRes.getLeft().problems().size());
+        assertEquals(expectedDesc, actualRes.getLeft().problems().get(0).description());
+    }
+
+    @Test
     public void testIsViewSchemaCompatibleWithSourceTableSchema_SchemasAreEquals() {
         Schema schema = Schema.of(
                 Field.of("stringField", StandardSQLTypeName.STRING),

@@ -279,4 +279,58 @@ public class BigQueryService {
                     List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
         }
     }
+
+    public Either<FailedOperation, List<Column>> getTableSchema(String project, String dataset, String table) {
+        try {
+            TableId tableId = TableId.of(project, dataset, table);
+            logger.info("Retrieving schema for table {}", tableId);
+            Table tableObj = bigQueryClient.getTable(tableId);
+            if (tableObj == null) {
+                String userMessage = "An unexpected error occurred";
+                String error = String.format(
+                        "Failed to retrieve schema for table '%s.%s.%s': table not found", project, dataset, table);
+                return left(new FailedOperation(
+                        userMessage,
+                        List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+            }
+
+            Schema schema = tableObj.getDefinition().getSchema();
+            if (schema == null || schema.getFields() == null) {
+                String userMessage = "An unexpected error occurred";
+                String error = String.format(
+                        "Failed to retrieve schema for table '%s.%s.%s': schema not available",
+                        project, dataset, table);
+                return left(new FailedOperation(
+                        userMessage,
+                        List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+            }
+
+            var columns = schema.getFields().stream()
+                    .map(field -> {
+                        var column = new Column();
+                        column.setName(field.getName());
+                        column.setDataType(field.getType().getStandardType().name());
+                        column.setDescription(field.getDescription());
+                        column.setConstraint(
+                                Optional.ofNullable(field.getMode()).map(Field.Mode::name));
+                        column.setDataLength(
+                                Optional.ofNullable(field.getMaxLength()).map(Long::intValue));
+                        column.setScale(Optional.ofNullable(field.getScale()).map(Long::intValue));
+                        column.setPrecision(
+                                Optional.ofNullable(field.getPrecision()).map(Long::intValue));
+                        return column;
+                    })
+                    .toList();
+
+            return right(columns);
+        } catch (Exception e) {
+            String userMessage = "An unexpected error occurred";
+            String error = String.format(
+                    "Failed to retrieve schema for table '%s.%s.%s': %s", project, dataset, table, e.getMessage());
+            logger.error(error, e);
+            return left(new FailedOperation(
+                    userMessage,
+                    List.of(new Problem(error, Optional.empty(), Set.of(ErrorConstants.PLATFORM_TEAM_SOLUTION)))));
+        }
+    }
 }

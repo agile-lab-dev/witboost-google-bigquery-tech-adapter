@@ -95,6 +95,7 @@ vulnerability_analysis:
     paths:
       - report/target/dependency-check-report.html
   when: manual
+  allow_failure: true
 
 license_check:
   stage: compile
@@ -133,7 +134,7 @@ test-jdk17:
 
 coverage-jdk17:
   stage: test
-  image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.9
+  image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.11
   script:
     - jacoco_paths=`find * -path "**/src/main/java" -type d | sed -e 's@^@'"$CI_PROJECT_DIR"'/@'`
     - python /opt/cover2cover.py report/target/site/jacoco-aggregate/jacoco.xml $jacoco_paths > report/target/site/cobertura.xml
