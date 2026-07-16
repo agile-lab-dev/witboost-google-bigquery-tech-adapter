@@ -13,6 +13,8 @@ import com.witboost.provisioning.bigquery.model.DeleteTableRequest;
 import com.witboost.provisioning.framework.common.ErrorConstants;
 import com.witboost.provisioning.model.Column;
 import java.util.List;
+import java.util.function.Function;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,8 +27,16 @@ public class BigQueryServiceTest {
     @Mock
     private BigQuery bigQueryClient;
 
+    @Mock
+    private Function<String, BigQuery> bigQueryClientSupplier;
+
     @InjectMocks
     private BigQueryService bigQueryService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(bigQueryClientSupplier.apply(any(String.class))).thenReturn(bigQueryClient);
+    }
 
     private final BigQueryException ex = new BigQueryException(401, "Unauthorized");
     private final String project = "project";

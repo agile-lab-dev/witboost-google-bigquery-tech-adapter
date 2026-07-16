@@ -17,6 +17,7 @@ import io.vavr.control.Option;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +28,15 @@ public class BigQueryService {
 
     private static final Logger logger = LoggerFactory.getLogger(BigQueryService.class);
 
-    private final BigQuery bigQueryClient;
+    private final Function<String, BigQuery> bigQueryClientSupplier;
 
-    public BigQueryService(BigQuery bigQueryClient) {
-        this.bigQueryClient = bigQueryClient;
+    public BigQueryService(Function<String, BigQuery> bigQueryClientSupplier) {
+        this.bigQueryClientSupplier = bigQueryClientSupplier;
     }
 
     public Either<FailedOperation, Option<Table>> getTable(String project, String dataset, String table) {
         try {
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(project);
             TableId tableId = TableId.of(project, dataset, table);
             logger.info("Checking existence of table {}", tableId);
             var tableObj = bigQueryClient.getTable(tableId);
@@ -77,6 +79,7 @@ public class BigQueryService {
 
     public Either<FailedOperation, Table> createOrUpdateView(CreateViewRequest createViewRequest) {
         try {
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(createViewRequest.project());
             TableId viewId =
                     TableId.of(createViewRequest.project(), createViewRequest.dataset(), createViewRequest.view());
             logger.info("Creating or updating view {}", viewId);
@@ -111,6 +114,7 @@ public class BigQueryService {
 
     public Either<FailedOperation, Void> deleteView(String project, String dataset, String view) {
         try {
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(project);
             TableId viewId = TableId.of(project, dataset, view);
             logger.info("Deleting view {}", viewId);
             bigQueryClient.delete(viewId);
@@ -127,6 +131,7 @@ public class BigQueryService {
     }
 
     private Table updateView(CreateViewRequest createViewRequest, String query, TableId viewId) {
+        BigQuery bigQueryClient = bigQueryClientSupplier.apply(createViewRequest.project());
         ViewDefinition viewDefinition = ViewDefinition.newBuilder(query)
                 .setSchema(generateSchema(createViewRequest.schema()))
                 .setUseLegacySql(false)
@@ -181,6 +186,7 @@ public class BigQueryService {
     public Either<FailedOperation, Dataset> createDatasetIfNotExists(CreateDatasetRequest createDatasetRequest) {
         try {
             logger.info("Creating dataset {}.{}", createDatasetRequest.projectId(), createDatasetRequest.datasetName());
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(createDatasetRequest.projectId());
             DatasetId datasetId = DatasetId.of(createDatasetRequest.projectId(), createDatasetRequest.datasetName());
             Dataset dataset = bigQueryClient.getDataset(datasetId);
             if (dataset != null) {
@@ -204,6 +210,7 @@ public class BigQueryService {
 
     public Either<FailedOperation, Table> createOrUpdateTable(CreateOrUpdateTableRequest createOrUpdateTableRequest) {
         try {
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(createOrUpdateTableRequest.projectId());
             TableId tableId = TableId.of(
                     createOrUpdateTableRequest.projectId(),
                     createOrUpdateTableRequest.datasetName(),
@@ -261,6 +268,7 @@ public class BigQueryService {
             TableId tableId = TableId.of(
                     deleteTableRequest.projectId(), deleteTableRequest.datasetName(), deleteTableRequest.tableName());
 
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(deleteTableRequest.projectId());
             bigQueryClient.delete(tableId);
 
             return right(null);
@@ -284,6 +292,7 @@ public class BigQueryService {
         try {
             TableId tableId = TableId.of(project, dataset, table);
             logger.info("Retrieving schema for table {}", tableId);
+            BigQuery bigQueryClient = bigQueryClientSupplier.apply(project);
             Table tableObj = bigQueryClient.getTable(tableId);
             if (tableObj == null) {
                 String userMessage = "An unexpected error occurred";

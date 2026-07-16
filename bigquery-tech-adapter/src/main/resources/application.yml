@@ -21,3 +21,8 @@ springdoc:
 
 principalMappingService:
   groupMailDomain: ""
+
+retry:
+  initial-backoff-ms: 500
+  max-backoff-ms: 8000
+  max-total-wait-ms: 120000

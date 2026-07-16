@@ -36,7 +36,7 @@ dataProduct:
       specific:
         schema:
           - name: day
-            dataType: DATA
+            dataType: DATE
           - name: top_term
             dataType: STRING
           - name: rank
@@ -44,6 +44,8 @@ dataProduct:
         project: projectName
         dataset: datasetName
         tableName: tableName
-        ownerRoles:
-          - roles/bigquery.dataOwner
+        iam:
+          developmentGroupRoles:
+            - role: roles/bigquery.dataOwner
+              scope: owner
 componentIdToProvision: urn:dmb:cmp:healthcare:vaccinations:0:bigquery-storage

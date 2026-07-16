@@ -3,12 +3,10 @@ package com.witboost.provisioning.bigquery.service.provision;
 import static io.vavr.control.Either.left;
 import static io.vavr.control.Either.right;
 
+import com.google.cloud.Identity;
 import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
-import com.witboost.provisioning.bigquery.model.BigQueryStorageSpecific;
-import com.witboost.provisioning.bigquery.model.CreateDatasetRequest;
-import com.witboost.provisioning.bigquery.model.CreateOrUpdateTableRequest;
-import com.witboost.provisioning.bigquery.model.DeleteTableRequest;
+import com.witboost.provisioning.bigquery.model.*;
 import com.witboost.provisioning.bigquery.service.AclService;
 import com.witboost.provisioning.bigquery.service.BigQueryService;
 import com.witboost.provisioning.bigquery.service.PrincipalMappingService;
@@ -65,9 +63,24 @@ public class StorageAreaProvisionService implements ProvisionService {
                             .toJavaSet())
                     .entrySet());
             var identities = Either.sequenceRight(mappedPrincipals.map(Map.Entry::getValue));
-            return identities.flatMap(ids -> aclService
-                    .applyAcls(stSpecific.getOwnerRoles(), ids.asJava(), table.getTableId())
-                    .flatMap(v -> right(toProvisionInfo(table))));
+            return identities
+                    .flatMap(ids -> aclService
+                            .applyAcls(
+                                    stSpecific.getIam().developmentGroupRoles().stream()
+                                            .filter(role -> role.scope() == IamScope.OWNER)
+                                            .map(ScopedIamRole::role)
+                                            .toList(),
+                                    ids.asJava(),
+                                    table.getTableId())
+                            .flatMap(ignored -> right(ids)))
+                    .flatMap(ids -> aclService.applyProjectAcls(
+                            stSpecific.getProject(),
+                            stSpecific.getIam().developmentGroupRoles().stream()
+                                    .filter(role -> role.scope() == IamScope.PROJECT)
+                                    .map(ScopedIamRole::role)
+                                    .toList(),
+                            ids.asJava().stream().map(Identity::strValue).toList()))
+                    .flatMap(v -> right(toProvisionInfo(table)));
         });
     }
 
@@ -86,7 +99,12 @@ public class StorageAreaProvisionService implements ProvisionService {
 
         var tableId = TableId.of(stSpecific.getProject(), stSpecific.getDataset(), stSpecific.getTableName());
         return aclService
-                .revokeRoles(stSpecific.getOwnerRoles(), tableId)
+                .revokeRoles(
+                        stSpecific.getIam().developmentGroupRoles().stream()
+                                .filter(role -> role.scope() == IamScope.OWNER)
+                                .map(ScopedIamRole::role)
+                                .toList(),
+                        tableId)
                 .flatMap(t ->
                         operationRequest.isRemoveData() ? bigQueryService.deleteTable((deleteRequest)) : right(null))
                 .map(t -> ProvisionInfo.builder().build());

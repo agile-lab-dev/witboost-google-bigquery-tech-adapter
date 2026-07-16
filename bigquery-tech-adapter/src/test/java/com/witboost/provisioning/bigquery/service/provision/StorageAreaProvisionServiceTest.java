@@ -60,6 +60,7 @@ public class StorageAreaProvisionServiceTest {
                         "group:dev",
                         right(Identity.group("dev@email.com"))));
         when(aclService.applyAcls(anyList(), anyList(), any())).thenReturn(right(null));
+        when(aclService.applyProjectAcls(any(), anyList(), anyList())).thenReturn(right(null));
 
         var actualRes = provisionService.provision(getProvisionOperationRequest(false));
 

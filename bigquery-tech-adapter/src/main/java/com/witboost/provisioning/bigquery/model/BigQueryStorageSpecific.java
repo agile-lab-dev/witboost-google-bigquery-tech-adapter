@@ -3,6 +3,7 @@ package com.witboost.provisioning.bigquery.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.witboost.provisioning.model.Column;
 import com.witboost.provisioning.model.Specific;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -24,8 +25,9 @@ public class BigQueryStorageSpecific extends Specific {
     private String tableName;
 
     @NotNull
-    private List<String> ownerRoles;
+    private List<Column> schema;
 
     @NotNull
-    private List<Column> schema;
+    @Valid
+    private Iam iam;
 }
